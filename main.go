@@ -170,6 +170,6 @@ func main() {
 		}
 	}()
 
-	log.Println("Server starting on :8080...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("Server starting on :9064...")
+	log.Fatal(http.ListenAndServe(":9064", nil))
 }
