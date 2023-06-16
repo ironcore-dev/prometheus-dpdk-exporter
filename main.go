@@ -146,9 +146,16 @@ func main() {
 	flag.Parse()
 
 	if *hostnameFlag == "" {
-		host, err = os.Hostname()
-		if err != nil {
-			fmt.Printf("Error retrieving hostname: %v\n", err)
+		// Try to get hostname from environment variable
+		envHostName := os.Getenv("NODE_NAME")
+		if envHostName != "" {
+			host = envHostName
+		} else {
+			// If environment variable not set, get hostname from os.Hostname
+			host, err = os.Hostname()
+			if err != nil {
+				fmt.Printf("Error retrieving hostname: %v\n", err)
+			}
 		}
 	} else {
 		host = *hostnameFlag
