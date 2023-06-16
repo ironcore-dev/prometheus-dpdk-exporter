@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -90,7 +91,6 @@ func queryTelemetry(conn net.Conn, command string, response interface{}) {
 		}
 	}
 
-	log.Printf("Raw reply %s\n", responseBuffer.String())
 	err = json.Unmarshal(responseBuffer.Bytes(), response)
 	if err != nil {
 		log.Fatalf("Failed to unmarshal JSON response: %v", err)
@@ -98,13 +98,11 @@ func queryTelemetry(conn net.Conn, command string, response interface{}) {
 }
 
 func updateMetrics(conn net.Conn, hostname string) {
-	log.Println("Updating metrics...")
 	var ethdevList EthdevList
 	queryTelemetry(conn, "/ethdev/list", &ethdevList)
 
 	for _, id := range ethdevList.Value {
 		var ethdevInfo EthdevInfo
-		log.Printf("Interface info for id %d\n", id)
 		queryTelemetry(conn, fmt.Sprintf("/ethdev/info,%d", id), &ethdevInfo)
 
 		var ethdevXstats EthdevXstats
@@ -128,7 +126,6 @@ func updateMetrics(conn net.Conn, hostname string) {
 		promMetricsCallCount.With(prometheus.Labels{"node_name": hostname, "graph_node": graphNodeName}).Set(callCount)
 	}
 
-	log.Println("Metrics update finished.")
 }
 
 func main() {
@@ -144,12 +141,19 @@ func main() {
 	}
 	defer conn.Close()
 
-	host, err := os.Hostname()
-	if err != nil {
-		fmt.Printf("Error retrieving hostname: %v\n", err)
+	var host string
+	hostnameFlag := flag.String("hostname", "", "Hostname to use")
+	flag.Parse()
+
+	if *hostnameFlag == "" {
+		host, err = os.Hostname()
+		if err != nil {
+			fmt.Printf("Error retrieving hostname: %v\n", err)
+		}
 	} else {
-		fmt.Printf("Hostname: %s\n", host)
+		host = *hostnameFlag
 	}
+	fmt.Printf("Hostname: %s\n", host)
 
 	flushSocket(conn)
 	go func() {
