@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -86,7 +87,9 @@ func queryTelemetry(conn net.Conn, command string, response interface{}) {
 			log.Fatalf("Failed to read response from %s: %v", socketPath, err)
 		}
 		responseBuffer.Write(respBytes[:n])
-		if bytes.Contains(respBytes, []byte(command[:len(command)-2])) {
+		parts := strings.SplitN(command, ",", 2)
+		command = parts[0]
+		if bytes.Contains(respBytes, []byte(command)) {
 			break
 		}
 	}
@@ -125,7 +128,6 @@ func updateMetrics(conn net.Conn, hostname string) {
 	for graphNodeName, callCount := range dpserviceCallCount.GraphCallCnt.Node_0_to_255 {
 		promMetricsCallCount.With(prometheus.Labels{"node_name": hostname, "graph_node": graphNodeName}).Set(callCount)
 	}
-
 }
 
 func main() {
@@ -143,6 +145,7 @@ func main() {
 
 	var host string
 	hostnameFlag := flag.String("hostname", "", "Hostname to use")
+	pollIntervalFlag := flag.Int("poll-interval", 20, "Polling interval in seconds")
 	flag.Parse()
 
 	if *hostnameFlag == "" {
@@ -166,7 +169,7 @@ func main() {
 	go func() {
 		for {
 			updateMetrics(conn, host)
-			time.Sleep(5 * time.Second)
+			time.Sleep(time.Duration(*pollIntervalFlag) * time.Second)
 		}
 	}()
 
