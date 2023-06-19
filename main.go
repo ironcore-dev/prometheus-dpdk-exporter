@@ -16,6 +16,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const (
+	maxRetries = 5
+	sleepTime  = 10 * time.Second
+)
+
 var (
 	socketPath = "/var/run/dpdk/rte/dpdk_telemetry.v2"
 
@@ -131,18 +136,26 @@ func updateMetrics(conn net.Conn, hostname string) {
 }
 
 func main() {
+	var conn net.Conn
+	var err error
+
 	r := prometheus.NewRegistry()
 	r.MustRegister(promMetrics)
 	r.MustRegister(promMetricsCallCount)
 
 	http.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
 
-	conn, err := net.Dial("unixpacket", socketPath)
-	if err != nil {
-		log.Fatalf("Failed to connect to %s: %v", socketPath, err)
+	for i := 0; i < maxRetries; i++ {
+		conn, err = net.Dial("unixpacket", socketPath)
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect to %s: %v. Retry %d of %d", socketPath, err, i+1, maxRetries)
+		if i < maxRetries-1 {
+			time.Sleep(sleepTime)
+		}
 	}
 	defer conn.Close()
-
 	var host string
 	hostnameFlag := flag.String("hostname", "", "Hostname to use")
 	pollIntervalFlag := flag.Int("poll-interval", 20, "Polling interval in seconds")
