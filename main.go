@@ -84,7 +84,7 @@ func queryTelemetry(conn net.Conn, command string, response interface{}) {
 		log.Fatalf("Failed to send command to %s: %v", socketPath, err)
 	}
 
-	respBytes := make([]byte, 1024*4)
+	respBytes := make([]byte, 1024*6)
 	var responseBuffer bytes.Buffer
 	for {
 		n, err := conn.Read(respBytes)
