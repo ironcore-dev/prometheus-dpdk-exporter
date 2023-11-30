@@ -1,6 +1,6 @@
-module go_client_1.go
+module github.com/ironcore-dev/prometheus-dpdk-exporter
 
-go 1.19
+go 1.21
 
 require (
 	github.com/google/addlicense v1.1.1
