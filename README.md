@@ -1,5 +1,5 @@
 # Prometheus DPDK Exporter
-Export net-dpservice statistics to prometheus readable format.
+Export dpservice statistics to prometheus readable format.
 
 ## About this project
 
