@@ -1,3 +1,18 @@
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
+
+all: build
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized
@@ -68,3 +83,21 @@ $(GOIMPORTS): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	test -s $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+##@ Build
+
+.PHONY: build
+build: fmt vet ## Build binary.
+	go build -o bin/prometheus-dpdk-exporter main.go
+
+.PHONY: install
+install:
+	go install .
+
+.PHONY: run
+run: fmt golangci-lint ## Run exporter from your host.
+	go run ./main.go
+
+.PHONY: release
+release: fmt lint
+	goreleaser release --snapshot --rm-dist
