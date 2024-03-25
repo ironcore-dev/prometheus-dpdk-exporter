@@ -62,6 +62,14 @@ type DpServiceNatPort struct {
 	Value map[string]int `json:"/dp_service/nat/used_port_count"`
 }
 
+type DpServiceVirtsvcPort struct {
+	Value map[string]int `json:"/dp_service/virtsvc/used_port_count"`
+}
+
+//type Commands struct {
+//	Value []string `json:"/"`
+//}
+
 type NodeData map[string]float64
 
 type GraphCallCount struct {
@@ -106,18 +114,26 @@ func queryTelemetry(conn net.Conn, command string, response interface{}) {
 	if err != nil {
 		log.Fatalf("Failed to unmarshal JSON response: %v", err)
 	}
+	//log.Println(response)
 }
 
 func updateMetrics(conn net.Conn, hostname string) {
+	//var commands Commands
+	//queryTelemetry(conn, "/", &commands)
+	//log.Println(commands)
+
 	var ethdevList EthdevList
 	queryTelemetry(conn, "/ethdev/list", &ethdevList)
+	//log.Println("ethdevList", ethdevList)
 
 	for _, id := range ethdevList.Value {
 		var ethdevInfo EthdevInfo
 		queryTelemetry(conn, fmt.Sprintf("/ethdev/info,%d", id), &ethdevInfo)
+		//log.Println("ethdevInfo", ethdevInfo)
 
 		var ethdevXstats EthdevXstats
 		queryTelemetry(conn, fmt.Sprintf("/ethdev/xstats,%d", id), &ethdevXstats)
+		//log.Println("ethdevXstats", ethdevXstats)
 
 		for statName, statValueFloat := range ethdevXstats.Value {
 			promMetrics.With(prometheus.Labels{"interface": ethdevInfo.Value.Name, "stat_name": statName}).Set(statValueFloat)
@@ -125,13 +141,21 @@ func updateMetrics(conn net.Conn, hostname string) {
 	}
 	var dpserviceNatPort DpServiceNatPort
 	queryTelemetry(conn, "/dp_service/nat/used_port_count", &dpserviceNatPort)
-
+	//log.Println("Dpservice nat port", dpserviceNatPort)
 	for ifName, portCount := range dpserviceNatPort.Value {
 		promMetrics.With(prometheus.Labels{"interface": ifName, "stat_name": "nat_used_port_count"}).Set(float64(portCount))
 	}
 
+	var dpserviceVirtsvcPort DpServiceVirtsvcPort
+	queryTelemetry(conn, "/dp_service/virtsvc/used_port_count", &dpserviceVirtsvcPort)
+	//log.Println("Dpservice virtsvc port", dpserviceVirtsvcPort)
+	for ifName, portCount := range dpserviceVirtsvcPort.Value {
+		promMetrics.With(prometheus.Labels{"interface": ifName, "stat_name": "virtsvc_used_port_count"}).Set(float64(portCount))
+	}
+
 	var dpserviceCallCount DpServiceGraphCallCount
 	queryTelemetry(conn, "/dp_service/graph/call_count", &dpserviceCallCount)
+	//log.Println("dpserviceCallCount", dpserviceCallCount)
 
 	for graphNodeName, callCount := range dpserviceCallCount.GraphCallCnt.Node_0_to_255 {
 		promMetricsCallCount.With(prometheus.Labels{"node_name": hostname, "graph_node": graphNodeName}).Set(callCount)
