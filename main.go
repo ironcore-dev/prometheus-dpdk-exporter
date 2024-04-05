@@ -5,8 +5,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/netip"
@@ -16,6 +14,7 @@ import (
 	"github.com/ironcore-dev/prometheus-dpdk-exporter/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -32,27 +31,21 @@ func main() {
 	var exporterPort uint64
 	var exporterAddr netip.AddrPort
 
+	log := logrus.New()
+	log.Formatter = new(logrus.JSONFormatter)
+
 	r := prometheus.NewRegistry()
 	r.MustRegister(metrics.InterfaceStat)
 	r.MustRegister(metrics.CallCount)
 
 	http.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
 
-	for i := 0; i < maxRetries; i++ {
-		conn, err = net.Dial("unixpacket", metrics.SocketPath)
-		if err == nil {
-			break
-		}
-		log.Printf("Failed to connect to %s: %v. Retry %d of %d", metrics.SocketPath, err, i+1, maxRetries)
-		if i < maxRetries-1 {
-			time.Sleep(sleepTime)
-		}
-	}
+	conn = connectToDpdkTelemetry(log)
 	defer conn.Close()
 
 	flag.StringVar(&hostnameFlag, "hostname", "", "Hostname to use")
 	flag.IntVar(&pollIntervalFlag, "poll-interval", 20, "Polling interval in seconds")
-	flag.Uint64Var(&exporterPort, "port", 9064, "Port on which exporter will be running.")
+	flag.Uint64Var(&exporterPort, "port", 8080, "Port on which exporter will be running.")
 	flag.Parse()
 
 	if exporterPort < 1024 || exporterPort > 65535 {
@@ -64,27 +57,59 @@ func main() {
 	if err != nil {
 		log.Fatal("could not get hostname")
 	}
-	fmt.Printf("Hostname: %s\n", host)
+	log.Infof("Hostname: %s", host)
 
-	flushSocket(conn)
 	go func() {
 		for {
-			metrics.Update(conn, host)
+			if !testDpdkConnection() {
+				log.Infof("Reconnecting to %s", metrics.SocketPath)
+				conn = connectToDpdkTelemetry(log)
+				log.Infof("Reconnected to %s", metrics.SocketPath)
+			}
+			metrics.Update(conn, host, log)
 			time.Sleep(time.Duration(pollIntervalFlag) * time.Second)
 		}
 	}()
 
-	log.Printf("Server starting on :%v...\n", exporterPort)
-	log.Fatal(http.ListenAndServe(exporterAddr.String(), nil))
+	log.Infof("Server starting on :%v...", exporterPort)
+
+	err = http.ListenAndServe(exporterAddr.String(), nil)
+	if err != nil {
+		log.Fatalf("ListenAndServe failed: %d", err)
+	}
 }
 
-func flushSocket(conn net.Conn) {
+func testDpdkConnection() bool {
+	_, err := net.Dial("unixpacket", metrics.SocketPath)
+	return err == nil
+}
+
+func connectToDpdkTelemetry(log *logrus.Logger) net.Conn {
+	for i := 0; i < maxRetries; i++ {
+		conn, err := net.Dial("unixpacket", metrics.SocketPath)
+		if err == nil {
+			err = flushSocket(conn)
+			if err != nil {
+				log.Fatalf("Failed to read response from %s: %v", metrics.SocketPath, err)
+			}
+			return conn
+		}
+		log.Warningf("Failed to connect to %s: %v. Retry %d of %d", metrics.SocketPath, err, i+1, maxRetries)
+		if i < maxRetries-1 {
+			time.Sleep(sleepTime)
+		}
+		if i == maxRetries-1 {
+			log.Fatal("Exiting. Maximum connection retries reached")
+		}
+	}
+	return nil
+}
+
+func flushSocket(conn net.Conn) error {
 	respBytes := make([]byte, 1024)
 
 	_, err := conn.Read(respBytes)
-	if err != nil {
-		log.Fatalf("Failed to read response from %s: %v", metrics.SocketPath, err)
-	}
+	return err
 }
 
 func getHostname(hostnameFlag string) (string, error) {
