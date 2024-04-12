@@ -5,15 +5,16 @@
 [![GitHub License](https://img.shields.io/static/v1?label=License&message=Apache-2.0&color=blue)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 
-Export dpservice statistics to prometheus readable format.
+Export Dpservice statistics to Prometheus readable format.
 
 ## About this project
 
-*Insert a short description of your project here...*
+The `prometheus-dpdk-exporter` is responsible for monitoring and exposing [Dpservice](https://github.com/ironcore-dev/dpservice) statistics from [DPDK telemetry](https://doc.dpdk.org/guides/howto/telemetry.html). When run, `prometheus-dpdk-exporter` creates a simple web server (on a configurable port), on which statistics can be reached. These statistics are updated in configurable time intervals and can be then visualized in dashboard tools like [Grafana](https://grafana.com/). Currently, it provides a solution to get the number of NAT ports used, the number of Virtual services used and other Interface statistics exported as [Prometheus metrics](https://prometheus.io/docs/instrumenting/exposition_formats/).
 
 ## Requirements and Setup
 
-*Insert a short description what is required to get your project running...*
+[Dpservice](https://github.com/ironcore-dev/dpservice) needs to be running on the same host to run `prometheus-dpdk-exporter` and to export the statistics `prometheus-dpdk-exporter` needs to have access to the socket with the path specified in variable `metrics.SocketPath` *(/var/run/dpdk/rte/dpdk_telemetry.v2)*.
+Also specified port (by default 8080) on which we want to run `prometheus-dpdk-exporter` needs to be available.
 
 ## Support, Feedback, Contributing
 
