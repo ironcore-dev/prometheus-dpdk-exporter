@@ -61,7 +61,7 @@ func main() {
 
 	go func() {
 		for {
-			if !testDpdkConnection() {
+			if !testDpdkConnection(conn, log) {
 				log.Infof("Reconnecting to %s", metrics.SocketPath)
 				conn = connectToDpdkTelemetry(log)
 				log.Infof("Reconnected to %s", metrics.SocketPath)
@@ -79,11 +79,20 @@ func main() {
 	}
 }
 
-func testDpdkConnection() bool {
-	_, err := net.Dial("unixpacket", metrics.SocketPath)
-	return err == nil
+// Tests if DPDK telemetry connection is working by writing to the connection
+func testDpdkConnection(conn net.Conn, log *logrus.Logger) bool {
+	_, err := conn.Write([]byte("/"))
+	if err != nil {
+		return false
+	}
+	flushErr := flushSocket(conn)
+	if flushErr != nil {
+		log.Fatalf("Failed to read response from %s: %v", metrics.SocketPath, err)
+	}
+	return true
 }
 
+// Connects to the DPDK telemetry
 func connectToDpdkTelemetry(log *logrus.Logger) net.Conn {
 	for i := 0; i < maxRetries; i++ {
 		conn, err := net.Dial("unixpacket", metrics.SocketPath)
@@ -105,6 +114,7 @@ func connectToDpdkTelemetry(log *logrus.Logger) net.Conn {
 	return nil
 }
 
+// Flushes the connection socket
 func flushSocket(conn net.Conn) error {
 	respBytes := make([]byte, 1024)
 
@@ -112,6 +122,7 @@ func flushSocket(conn net.Conn) error {
 	return err
 }
 
+// Gets the hostname from flag, env variable or OS hostname
 func getHostname(hostnameFlag string) (string, error) {
 	if hostnameFlag == "" {
 		// Try to get hostname from environment variable
