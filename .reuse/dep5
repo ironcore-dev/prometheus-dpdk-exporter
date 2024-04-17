@@ -13,6 +13,7 @@ Files:
   CODEOWNERS
   CODE_OF_CONDUCT.md
   CONTRIBUTING.md
+  Dockerfile
   Makefile
   go.mod
   go.sum
