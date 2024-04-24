@@ -46,6 +46,9 @@ func queryTelemetry(conn net.Conn, log *logrus.Logger, command string, response 
 }
 
 func Update(conn net.Conn, hostname string, log *logrus.Logger) {
+	var dpserviceHeapInfo DpServiceHeapInfo
+	queryTelemetry(conn, log, "/eal/heap_info", &dpserviceHeapInfo)
+
 	var ethdevList EthdevList
 	queryTelemetry(conn, log, "/ethdev/list", &ethdevList)
 
