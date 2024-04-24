@@ -9,7 +9,7 @@ var (
 	InterfaceStat = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "dpdk_interface_stat",
-			Help: "DPDK interface statistic",
+			Help: "Dp-Service interface statistic",
 		},
 		[]string{"interface", "stat_name"},
 	)
@@ -20,6 +20,14 @@ var (
 			Help: "Dp-Service graph statistics",
 		},
 		[]string{"node_name", "graph_node"},
+	)
+
+	HeapInfo = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "dpdk_heap_info",
+			Help: "Dp-Service heap info",
+		},
+		[]string{"node_name", "info"},
 	)
 )
 
@@ -53,4 +61,8 @@ type GraphCallCount struct {
 
 type DpServiceGraphCallCount struct {
 	GraphCallCnt GraphCallCount `json:"/dp_service/graph/call_count"`
+}
+
+type DpServiceHeapInfo struct {
+	Value map[string]int `json:"/eal/heap_info"`
 }
