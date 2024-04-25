@@ -37,6 +37,7 @@ func main() {
 	r := prometheus.NewRegistry()
 	r.MustRegister(metrics.InterfaceStat)
 	r.MustRegister(metrics.CallCount)
+	r.MustRegister(metrics.HeapInfo)
 
 	http.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
 
