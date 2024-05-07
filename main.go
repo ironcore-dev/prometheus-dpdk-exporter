@@ -46,7 +46,7 @@ func main() {
 
 	flag.StringVar(&hostnameFlag, "hostname", "", "Hostname to use")
 	flag.IntVar(&pollIntervalFlag, "poll-interval", 20, "Polling interval in seconds")
-	flag.Uint64Var(&exporterPort, "port", 8080, "Port on which exporter will be running.")
+	flag.Uint64Var(&exporterPort, "port", 9064, "Port on which exporter will be running.")
 	flag.Parse()
 
 	if exporterPort < 1024 || exporterPort > 65535 {
