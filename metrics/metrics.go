@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var SocketPath = "/var/run/dpdk/rte/dpdk_telemetry.v2"
+const SocketPath = "/var/run/dpdk/rte/dpdk_telemetry.v2"
 
 func queryTelemetry(conn net.Conn, log *logrus.Logger, command string, response interface{}) {
 	_, err := conn.Write([]byte(command))
